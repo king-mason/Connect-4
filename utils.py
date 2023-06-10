@@ -1,218 +1,233 @@
 import numpy as np
 import time
+from board import Board
+import random
 
-MAX_DEPTH = 3
+
+MAX_DEPTH = 4
+MAX_TT_ITEMS = 2000
 turn = 2
+counter = 0
+
+# transposition table
+tt = dict()
+queue = list()
 
 
-def valid_move(board, row, col):
-    rows = len(board)
-    cols = len(board[0])
+# class TranspositionTable:
+#     def __init__(self):
+#         self.table = dict()
+#         self.queue = list()
+
+
+def valid_move(board: Board, row: int, col: int):
+    rows = board.rows
+    cols = board.cols
     
     if row < 1 or row > rows:
         return False
     if col < 1 or col > cols:
         return False
-    if board[row - 1, col - 1] != 0:
+    if board.board[row - 1, col - 1] != 0:
         return False
     if row < rows:
-        if board[row, col - 1] == 0:
+        if board.board[row, col - 1] == 0:
             return False
     return True
 
 
-def moves(board):
-    children = []
-    for col in range(1, len(board[0]) + 1):
-        row = len(board)
+def moves(board: Board):
+    possible_moves = []
+    for col in range(1, board.cols + 1):
+        # start at bottom row
+        row = board.rows
         while not valid_move(board, row, col):
             row -= 1
             if row < 1:
                 break
         if valid_move(board, row, col):
             new_board = board.copy()
-            new_board[row - 1, col - 1] = turn
-            children.append(new_board)
-    # print(children)
-    return children
-        
+            new_board.board[row - 1, col - 1] = turn
+            possible_moves.append(new_board)
+    return possible_moves
 
-def maximize(board, depth):
-    # print('maximizing')
+
+def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: float):
     global turn
-    turn = 2
-    empty_spaces = len(board[board == 0])
+    global counter
+    counter += 1
+    empty_spaces = (board.board == 0).sum()
+
+    if depth == 1:
+        print('1/7')
 
     if empty_spaces == 0 or depth == MAX_DEPTH:
-        # print(board)
-        # print(calc_score(board))
         return None, calc_score(board)
+    
+    
+    if max_player:
+        turn = 2
+        move_possibilities = moves(board)
+        random.shuffle(move_possibilities)  # randomize move order
+        max_score = -np.inf
+        max_score_move = None
+
+        for move in move_possibilities:
+            # check if move already has been evaluated
+            id = move.get_id()
+            score = tt.get(id, None)
+            if score is None:
+                score = minimax(move, depth + 1, False, alpha, beta)[1]
+            if score > max_score:
+                max_score_move = move
+                max_score = score
+            alpha = max(alpha, max_score)
+            if alpha >= beta:
+                break
+
+        if depth > 2:
+            id = max_score_move.get_id()
+            if depth > 3 or max_score < alpha:
+                if tt.get(id, None) is not None:
+                    if id in queue:
+                        queue.remove(id)
+                queue.append(id)
+            tt[id] = max_score
+            if len(tt) > MAX_TT_ITEMS:
+                if len(queue) == 0:
+                    queue.append(random.choice(list(tt.keys())))
+                del tt[queue.pop(0)]
+
+        return max_score_move, max_score
+    
+    else: # Minimizing player
+        turn = 1
+        move_possibilities = moves(board)
+        random.shuffle(move_possibilities)  # randomize move order
+        min_score = np.inf
+        min_score_move = None
+
+        for move in move_possibilities:
+            id = move.get_id()
+            score = tt.get(id, None)
+            if score is None:
+                score = minimax(move, depth + 1, True, alpha, beta)[1]
+            if score < min_score:
+                min_score_move = move
+                min_score = score
+            beta = min(beta, min_score)
+            if alpha >= beta:
+                break
+
+        if depth > 2:
+            id = min_score_move.get_id()
+            if depth > 3 or min_score > beta:
+                if tt.get(id, None) is not None:
+                    if id in queue:
+                        # reset spot in queue
+                        queue.remove(id)
+                queue.append(id)
+            tt[id] = min_score
+            if len(tt) > MAX_TT_ITEMS:
+                if len(queue) == 0:
+                    queue.append(random.choice(list(tt.keys())))
+                del tt[queue.pop(0)]
+        
+        return min_score_move, min_score
+    
+
+def negamax(board: Board, depth: int, max_player: bool):
+    global turn
+    if max_player:
+        turn = 2
+    else:
+        turn = 1
+    empty_spaces = (board.board == 0).sum()
+
+    if empty_spaces == 0 or depth == 0 or board.check_win():
+        if max_player:
+            return None, calc_score(board)
+        else:
+            return None, calc_score(board) * -1
     
     max_score = -np.inf
     max_score_move = None
 
     for move in moves(board):
-        (new_board, _) = minimize(move, depth + 1)
+        (new_board, score) = negamax(move, depth - 1, not max_player)
         if new_board is None:
             new_board = board
-        score = calc_score(new_board)
+        print(score)
+        # score = calc_score(new_board)
+        # print(new_board, score)
         if score > max_score:
             max_score_move = move
             max_score = score
 
-    return max_score_move, max_score
-
-
-def minimize(board, depth):
-    # print('minimizing')
-    global turn
-    turn = 1
-    empty_spaces = len(board[board == 0])
-
-    if empty_spaces == 0 or depth == MAX_DEPTH:
-        # print(board)
-        # print(calc_score(board))
-        return None, calc_score(board)
-    
-    min_score = np.inf
-    min_score_move = None
-
-    for move in moves(board):
-        (new_board, _) = maximize(move, depth + 1)
-        if new_board is None:
-            new_board = board
-        score = calc_score(new_board)
-        if score < min_score:
-            min_score_move = move
-            min_score = score
-
-    return min_score_move, min_score
+    return max_score_move, -max_score
 
 
 # ASSUMES COMPUTER IS ALWAYS PLAYER 2
-def calc_score(board):
+def calc_score(board: Board):
 
     score = 0
 
-    rows = len(board)
-    cols = len(board[0])
-
-    for i in range(rows):
-        for j in range(cols):
-
-            # check across
-            if j < cols - 3:
-                horizontal = board[i, j:j+4]
-
-            # check down
-            if i < rows - 3:
-                vertical = board[i:i+4, j]
-
-            # check diagonals
-            if j < cols - 3 and i < rows - 3:
-                ascending = np.array([board[i+3-k, j+k] for k in range(4)])
-                descending = np.array([board[i+k, j+k] for k in range(4)])
+    # computer
+    wins = board.search_board(2, 4, 0)
+    score += wins * 1000
     
+    threes = board.search_board(2, 4, 1)
+    score += threes * 15
 
-            if (all(horizontal == 1) or all(vertical == 1) or
-                all(ascending == 1) or all(descending == 1)):
-                return -10
-            
-            if (all(horizontal == 2) or all(vertical == 2) or
-                all(ascending == 2) or all(descending == 2)):
-                return 10
-            
-    for i in range(rows):
-        for j in range(cols):
+    twos = board.search_board(2, 4, 2)
+    score += twos * 8
 
-            # check across
-            if j < cols - 3:
-                horizontal = board[i, j:j+4]
-
-            # check down
-            if i < rows - 3:
-                vertical = board[i:i+4, j]
-
-            # check diagonals
-            if j < cols - 3 and i < rows - 3:
-                ascending = np.array([board[i+3-k, j+k] for k in range(4)])
-                descending = np.array([board[i+k, j+k] for k in range(4)])
-
-            # print(horizontal)
-            # print(vertical)
-            # print(ascending)
-            # print(descending)
+    # opponent
+    wins = board.search_board(1, 4, 0)
+    score -= wins * 1000
     
+    threes = board.search_board(1, 4, 1)
+    score -= threes * 10
 
-            if (all(horizontal[:3] == 1) and horizontal[3] == 0):
-                score -= 2
-            if (all(vertical[:3] == 1) and vertical[3] == 0):
-                score -= 2
-            if (all(ascending[:3] == 1) and ascending[3] == 0):
-                score -= 2
-            if (all(descending[:3] == 1) and descending[3] == 0):
-                score -= 2
-            
-            if (all(horizontal[:3] == 2) and horizontal[3] == 0):
-                score += 2
-            if (all(vertical[:3] == 2) and vertical[3] == 0):
-                score += 2
-            if (all(ascending[:3] == 2) and ascending[3] == 0):
-                score += 2
-            if (all(descending[:3] == 2) and descending[3] == 0):
-                score += 2
+    twos = board.search_board(1, 4, 2)
+    score -= twos * 5
 
-            if (all(horizontal[1:4] == 1) and horizontal[0] == 0):
-                score -= 2
-            if (all(vertical[1:4] == 1) and vertical[0] == 0):
-                score -= 2
-            if (all(ascending[1:4] == 1) and ascending[0] == 0):
-                score -= 2
-            if (all(descending[1:4] == 1) and descending[0] == 0):
-                score -= 2
-            
-            if (all(horizontal[1:4] == 2) and horizontal[0] == 0):
-                score += 2
-            if (all(vertical[1:4] == 2) and vertical[0] == 0):
-                score += 2
-            if (all(ascending[1:4] == 2) and ascending[0] == 0):
-                score += 2
-            if (all(descending[1:4] == 2) and descending[0] == 0):
-                score += 2
+    # bonus points for center pieces
+    center_pieces = board.board[:, board.cols//2]
+    score += list(center_pieces).count(2)
+
+    # check possible wins
+    comp_possible_wins = 0
+    opp_possible_wins = 0
+    for i in range(4):
+        comp_possible_wins += board.search_board(2, 4, i+1)
+        opp_possible_wins += board.search_board(1, 4, i+1)
+    score += comp_possible_wins - opp_possible_wins
 
     return score
-            
 
 
-def minimax(board):
-    move, score = maximize(board, 0)
-
-    print(move, score)
-
-    return move
-
-
-if __name__ == '__main__':
+def main():
     rows, cols = (6, 7)
-    arr = [[0 for _ in range(cols)] for _ in range(rows)]
-    arr = np.array(arr)
-    # arr[-1, ::2] = 1
-    # arr[-1, 1::2] = 2
-    # arr[-2, ::2] = 1
-    # arr[-2, 1::2] = 2
+    my_board = Board(rows, cols)
 
-    # arr[-3, 1] = 2
-
-
-    arr[-1, 1] = 1
+    test_id = '000000000000000000000000000000000002011000'
+    my_board.set_board(test_id)
 
     print()
     print('board:')
-    print(arr)
+    my_board.print_board()
     # print(calc_score(arr))
     time.sleep(3)
     print()
     print('best move:')
-    minimax(arr)
+    move, score = minimax(my_board, 0, True, -np.inf, np.inf)
+    # move, score = negamax(my_board, MAX_DEPTH, True)
+    move.print_board()
+    print(score)
 
+
+if __name__ == '__main__':
+    main()
+    print(counter)
 
