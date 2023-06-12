@@ -6,13 +6,13 @@ class Board:
     def __init__(self, rows, cols):
         self.rows = rows
         self.cols = cols
-
         self.board = self.create_empty_board()
 
     def create_empty_board(self):
         return np.array([[0 for _ in range(self.cols)] for _ in range(self.rows)])
 
     def print_board(self):
+        """Prints a neat text version of the board"""
         print('+' + '—' * (self.cols * 2 + 1) + '+')
         for row in self.board:
             print('|', end=' ')
@@ -22,14 +22,16 @@ class Board:
         print('+' + '—' * (self.cols * 2 + 1) + '+')
 
     def search_board(self, player_num: int, length: int, blank_spaces: int):
-        '''Generalized search method that will count and return all of the rows, columns, and diagonals
-           that contain only the given player number and the exact amount of blank spaces.'''
+        """Generalized search method that will count and return all the rows, columns, and diagonals
+           that contain only the given player number and the exact amount of blank spaces."""
 
         def valid_section(section):
+            """Checks if the number of zeros and player numbers in the section fit the outer parameters"""
             count = (section == player_num).sum()
             zeros = (section == 0).sum()
-            if (count == length - blank_spaces and zeros == blank_spaces):
+            if count == length - blank_spaces and zeros == blank_spaces:
                 return True
+            return False
 
         total = 0
 

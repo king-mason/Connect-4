@@ -3,11 +3,11 @@ import time
 from board import Board
 import random
 
-
 MAX_DEPTH = 4
 MAX_TT_ITEMS = 2000
 turn = 2
 counter = 0
+step = 0
 
 # transposition table
 tt = dict()
@@ -23,7 +23,7 @@ queue = list()
 def valid_move(board: Board, row: int, col: int):
     rows = board.rows
     cols = board.cols
-    
+
     if row < 1 or row > rows:
         return False
     if col < 1 or col > cols:
@@ -55,20 +55,24 @@ def moves(board: Board):
 def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: float):
     global turn
     global counter
+    global step
     counter += 1
     empty_spaces = (board.board == 0).sum()
 
     if depth == 1:
-        print('1/7')
+        step += 1
+        print(f'{step}/7')
+        if step == 7:
+            step = 0
 
-    if empty_spaces == 0 or depth == MAX_DEPTH:
+    if empty_spaces == 0 or depth == MAX_DEPTH or board.check_win():
         return None, calc_score(board)
-    
-    
+
     if max_player:
         turn = 2
         move_possibilities = moves(board)
         random.shuffle(move_possibilities)  # randomize move order
+        move_possibilities.sort(key=lambda x: x.search_board(turn, 4, 0))  # prioritize wins
         max_score = -np.inf
         max_score_move = None
 
@@ -99,11 +103,12 @@ def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: floa
                 del tt[queue.pop(0)]
 
         return max_score_move, max_score
-    
-    else: # Minimizing player
+
+    else:  # Minimizing player
         turn = 1
         move_possibilities = moves(board)
         random.shuffle(move_possibilities)  # randomize move order
+        move_possibilities.sort(key=lambda x: x.search_board(turn, 4, 0))  # prioritize wins
         min_score = np.inf
         min_score_move = None
 
@@ -132,9 +137,9 @@ def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: floa
                 if len(queue) == 0:
                     queue.append(random.choice(list(tt.keys())))
                 del tt[queue.pop(0)]
-        
+
         return min_score_move, min_score
-    
+
 
 def negamax(board: Board, depth: int, max_player: bool):
     global turn
@@ -149,7 +154,7 @@ def negamax(board: Board, depth: int, max_player: bool):
             return None, calc_score(board)
         else:
             return None, calc_score(board) * -1
-    
+
     max_score = -np.inf
     max_score_move = None
 
@@ -169,13 +174,12 @@ def negamax(board: Board, depth: int, max_player: bool):
 
 # ASSUMES COMPUTER IS ALWAYS PLAYER 2
 def calc_score(board: Board):
-
     score = 0
 
     # computer
     wins = board.search_board(2, 4, 0)
     score += wins * 1000
-    
+
     threes = board.search_board(2, 4, 1)
     score += threes * 15
 
@@ -185,7 +189,7 @@ def calc_score(board: Board):
     # opponent
     wins = board.search_board(1, 4, 0)
     score -= wins * 1000
-    
+
     threes = board.search_board(1, 4, 1)
     score -= threes * 10
 
@@ -193,15 +197,15 @@ def calc_score(board: Board):
     score -= twos * 5
 
     # bonus points for center pieces
-    center_pieces = board.board[:, board.cols//2]
+    center_pieces = board.board[:, board.cols // 2]
     score += list(center_pieces).count(2)
 
     # check possible wins
     comp_possible_wins = 0
     opp_possible_wins = 0
     for i in range(4):
-        comp_possible_wins += board.search_board(2, 4, i+1)
-        opp_possible_wins += board.search_board(1, 4, i+1)
+        comp_possible_wins += board.search_board(2, 4, i + 1)
+        opp_possible_wins += board.search_board(1, 4, i + 1)
     score += comp_possible_wins - opp_possible_wins
 
     return score
@@ -230,4 +234,3 @@ def main():
 if __name__ == '__main__':
     main()
     print(counter)
-
