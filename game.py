@@ -17,6 +17,8 @@ COLOR_TEXT = 'dark blue'
 COLOR_BUTTON = (0, 0, 255, 255)  # blue
 COLOR_BUTTON_HOVER = (100, 100, 100, 100)  # gray
 
+COLOR_HIGHLIGHT_KEYS = {1: COLOR_1, 2: COLOR_2}
+
 FONT_LARGE = pygame.font.SysFont('Corbel', 100, bold=True)
 FONT_MEDIUM = pygame.font.SysFont('Corbel', 50, bold=True)
 FONT_SMALL = pygame.font.SysFont('Corbel', 30, bold=True)
@@ -37,7 +39,7 @@ BUTTON_BOARD = None
 
 NUM_KEYS = range(48, 58)
 
-MODE = 1  # 1: pvp, 2: pvc, 3: cvc
+MODE = 2  # 1: pvp, 2: pvc, 3: cvc
 
 DROP_DELAY = 100
 DELAY = DROP_DELAY * ROWS
@@ -118,6 +120,7 @@ class Connect4:
 
     def player_vs_player(self):
         # Highlight column
+        self.draw_highlight()
         if 0 <= self.piece_col < self.cols:
             # Check if row is full first
             # If so, they get to re-pick move
@@ -131,6 +134,8 @@ class Connect4:
 
     def player_vs_computer(self):
         if self.turn == 1:
+            # Highlight column
+            self.draw_highlight()
             if 0 <= self.piece_col < self.cols:
                 if all(self.game_board.board[:, self.piece_col - 1]):
                     return
@@ -181,8 +186,8 @@ class Connect4:
         for i in range(ROWS):
             for j in range(COLS):
                 w, h = WIDTH // COLS, HEIGHT // ROWS
-                # pygame.draw.rect(self.screen, 'blue', [w*j, h*i, w+1, h+1], 5)  # grid
-                circle_rect = pygame.rect.Rect(w * j + 10, h * i + 10, w - 20, h - 20)  # circle parameters
+                # Create a circle for each space
+                circle_rect = pygame.rect.Rect(w * j + 10, h * i + 10, w - 20, h - 20)  
                 if self.game_board.board[i, j] == 1:
                     color = COLOR_1
                 elif self.game_board.board[i, j] == 2:
@@ -190,6 +195,13 @@ class Connect4:
                 else:
                     color = COLOR_BG
                 pygame.draw.ellipse(self.screen, color, circle_rect)
+
+    def draw_highlight(self):
+        highlight_col = self.mouse_pos[0] // COL_WIDTH
+        highlight = pygame.Surface((COL_WIDTH, HEIGHT))
+        highlight.fill(COLOR_HIGHLIGHT_KEYS[self.turn])
+        highlight.set_alpha(100)
+        self.screen.blit(highlight, (highlight_col * COL_WIDTH, 0))
 
     def handle_inputs(self):
         for event in pygame.event.get():
