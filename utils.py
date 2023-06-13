@@ -14,12 +14,6 @@ tt = dict()
 queue = list()
 
 
-# class TranspositionTable:
-#     def __init__(self):
-#         self.table = dict()
-#         self.queue = list()
-
-
 def valid_move(board: Board, row: int, col: int):
     rows = board.rows
     cols = board.cols
@@ -216,7 +210,7 @@ def main():
     rows, cols = (6, 7)
     my_board = Board(rows, cols)
 
-    test_id = '000000000000000000000000000000000002011000'
+    test_id = '000000000000000000000002100010120002211200'
     my_board.set_board(test_id)
 
     print()
@@ -225,15 +219,15 @@ def main():
     # print(calc_score(arr))
     time.sleep(3)
     print()
-    print('Best move:')
-    move, score = minimax(my_board, 0, True, -np.inf, np.inf)
-    diff = my_board.board - move.board
-    for col in range(my_board.cols):
-        if any(diff[:, col]):
-            print('Playing in column', col + 1)
-    move.print_board()
-    print('Score:', score)
-    print(f'Called minimax {counter} times')
+    # print('Best move:')
+    # move, score = minimax(my_board, 0, True, -np.inf, np.inf)
+    # diff = my_board.board - move.board
+    # for col in range(my_board.cols):
+    #     if any(diff[:, col]):
+    #         print('Playing in column', col + 1)
+    # move.print_board()
+    # print('Score:', score)
+    # print(f'Called minimax {counter} times')
 
 
 if __name__ == '__main__':
