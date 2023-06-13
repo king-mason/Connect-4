@@ -7,8 +7,8 @@ from button import Button
 ROWS, COLS = (6, 7)
 WIDTH, HEIGHT = (1000, 800)
 
-COLOR_1 = 'blue'
-COLOR_2 = 'red'
+COLOR_1 = 'cyan'
+COLOR_2 = 'darkorchid'
 COLOR_BG = 'white'
 COLOR_BOARD = (255, 225, 0, 255)  # yellow
 COLOR_MENU = 'yellow'
@@ -32,14 +32,15 @@ QUIT_BUTTON = Button(text_input='QUIT', pos=(WIDTH / 2, HEIGHT / 2 + 260),
 
 NUM_KEYS = range(48, 58)
 
-MODE = 2  # 1: pvp, 2: pvc, 3: cvc
+MODE = 1  # 1: pvp, 2: pvc, 3: cvc
 
-DELAY = 100
+DROP_DELAY = 200
+DELAY = DROP_DELAY * ROWS
 
 winners = {1: 0, 2: 0}
 
 
-class Connect4:
+class Connect4():
     def __init__(self):
         pygame.init()
         pygame.display.set_caption('Connect 4')
@@ -51,9 +52,13 @@ class Connect4:
         self.board = Board(ROWS, COLS)
         self.draw_board()
         self.turn = 1
-        self.move = 0
+        self.piece_row = -1
+        self.piece_col = -1
+        self.falling = False
         self.delay_start = 0
         self.state = 'Menu'
+        self.drop_timer = pygame.USEREVENT + 1
+        pygame.time.set_timer(self.drop_timer, DROP_DELAY)
 
     def main_loop(self):
         while True:
@@ -123,19 +128,25 @@ class Connect4:
             self.play_cvc()
 
     def play_pvp(self):
-        if self.move:
+        if (0 <= self.piece_col < self.cols and 
+            pygame.time.get_ticks() >= self.delay_start + DELAY):
+            
+            self.piece_row = 0
             success = self.player_turn(self.turn)
-            if not success:
-                return
+            # if not success:
+            #     return
             self.draw_board()
             winner = self.board.check_win()
             if winner:
                 pygame.time.wait(2000)
+                self.board.reset_board()
+                self.state = 'Menu'
                 self.main_menu()
             if self.turn == 1:
                 self.turn = 2
             else:
                 self.turn = 1
+            self.delay_start = pygame.time.get_ticks()
 
     def play_pvc(self):
         if self.turn == 1:
@@ -177,6 +188,7 @@ class Connect4:
             if winner:
                 pygame.time.wait(2000)
                 self.board.reset_board()
+                self.draw_board()
             self.delay_start = pygame.time.get_ticks()
 
     def handle_inputs(self):
@@ -186,13 +198,13 @@ class Connect4:
                 quit()
 
             if event.type == pygame.KEYDOWN:
-                # print(event.key)
                 if event.key == pygame.K_ESCAPE:
                     print(winners)
                     self.state = 'Menu'
                 if event.key in NUM_KEYS:
-                    # print(event.key - 48)
-                    self.move = event.key - 48
+                    if pygame.time.get_ticks() >= self.delay_start + DELAY:
+                        # Set column to key number
+                        self.piece_col = event.key - 49
                 if event.key == pygame.K_SPACE:
                     print(winners)
 
@@ -212,7 +224,29 @@ class Connect4:
                     pass
 
                 if self.state == 'Play':
-                    pass
+                    if pygame.time.get_ticks() >= self.delay_start + DELAY:
+                        pass
+
+            # Falling animation
+            if event.type == self.drop_timer:
+
+                if self.falling:
+
+                    # Move piece
+                    self.board.board[self.piece_row, self.piece_col] = self.turn
+                    if self.piece_row != 0:
+                        self.board.board[self.piece_row - 1, self.piece_col] = 0
+                    self.piece_row += 1
+
+                    # Check for bottom
+                    if self.piece_row == self.rows:
+                        self.falling = False
+                        self.piece_col = -1
+                    # Check for piece
+                    elif self.board.board[self.piece_row, self.piece_col] != 0:
+                        self.falling = False
+                        self.piece_col = -1
+                    
 
     def draw_board(self):
         self.screen.fill(COLOR_BOARD)
@@ -243,16 +277,15 @@ class Connect4:
 
     def player_turn(self, player_num):
 
-        col = self.move
-        row = self.rows
+        # Check if row is full
+        if all(self.board.board[:, self.piece_col - 1]):
+            return False
 
-        while not self.valid_move(row, col):
-            row -= 1
-            if row < 1:
-                # print('You cannot play in that column.')
-                return False
-
-        self.board.board[row - 1, col - 1] = player_num
+        # Fall down a space
+        # every drop event (100 ms)
+        self.falling = True
+        
+        # self.board.board[self.piece_row - 1, self.piece_col - 1] = player_num
         return True
 
     def computer_turn(self, player_num):
