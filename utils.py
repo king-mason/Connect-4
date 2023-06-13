@@ -3,7 +3,7 @@ import time
 from board import Board
 import random
 
-MAX_DEPTH = 2
+MAX_DEPTH = 4
 MAX_TT_ITEMS = 2000
 turn = 2
 counter = 0
@@ -220,18 +220,22 @@ def main():
     my_board.set_board(test_id)
 
     print()
-    print('board:')
+    print('Current Board:')
     my_board.print_board()
     # print(calc_score(arr))
     time.sleep(3)
     print()
-    print('best move:')
+    print('Best move:')
     move, score = minimax(my_board, 0, True, -np.inf, np.inf)
-    # move, score = negamax(my_board, MAX_DEPTH, True)
+    diff = my_board.board - move.board
+    for col in range(my_board.cols):
+        if any(diff[:, col]):
+            print('Playing in column', col + 1)
     move.print_board()
-    print(score)
+    print('Score:', score)
+    print(f'Called minimax {counter} times')
 
 
 if __name__ == '__main__':
     main()
-    print(counter)
+

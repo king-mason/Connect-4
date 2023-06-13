@@ -3,7 +3,8 @@ import sys
 
 pygame.init()
 
-class Button():
+
+class Button:
     def __init__(self, text_input, pos, font, base_color, hover_color):
         self.text_input = text_input
         self.x_pos = pos[0]
@@ -24,5 +25,3 @@ class Button():
         else:
             self.text = self.font.render(self.text_input, True, self.base_color)
             return False
-
-

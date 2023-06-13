@@ -66,13 +66,10 @@ class Board():
         return total
     
     def check_win(self):
-
         if self.search_board(1, 4, 0) > 0:
             return 1
-        
         if self.search_board(2, 4, 0) > 0:
             return 2
-
         return 0
 
     def get_id(self):

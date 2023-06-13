@@ -16,40 +16,44 @@ COLOR_TEXT = 'dark blue'
 COLOR_BUTTON = (0, 0, 255, 255)  # blue
 COLOR_BUTTON_HOVER = (100, 100, 100, 100)  # gray
 
-LARGE_FONT = pygame.font.SysFont('Corbel', 100, bold=True)
-MEDIUM_FONT = pygame.font.SysFont('Corbel', 50, bold=True)
-SMALL_FONT = pygame.font.SysFont('Corbel', 30, bold=True)
+FONT_LARGE = pygame.font.SysFont('Corbel', 100, bold=True)
+FONT_MEDIUM = pygame.font.SysFont('Corbel', 50, bold=True)
+FONT_SMALL = pygame.font.SysFont('Corbel', 30, bold=True)
 
-PLAY_BUTTON = Button(text_input='START', pos=(WIDTH / 2, HEIGHT / 2),
-                     font=LARGE_FONT, base_color=COLOR_BUTTON,
+BUTTON_PLAY = Button(text_input='START', pos=(WIDTH / 2, HEIGHT / 2),
+                     font=FONT_LARGE, base_color=COLOR_BUTTON,
                      hover_color=COLOR_BUTTON_HOVER)
-OPTIONS_BUTTON = Button(text_input='OPTIONS', pos=(WIDTH / 2, HEIGHT / 2 + 200),
-                        font=MEDIUM_FONT, base_color=COLOR_BUTTON,
+BUTTON_OPTIONS = Button(text_input='OPTIONS', pos=(WIDTH / 2, HEIGHT / 2 + 200),
+                        font=FONT_MEDIUM, base_color=COLOR_BUTTON,
                         hover_color=COLOR_BUTTON_HOVER)
-QUIT_BUTTON = Button(text_input='QUIT', pos=(WIDTH / 2, HEIGHT / 2 + 260),
-                     font=MEDIUM_FONT, base_color=COLOR_BUTTON,
+BUTTON_QUIT = Button(text_input='QUIT', pos=(WIDTH / 2, HEIGHT / 2 + 260),
+                     font=FONT_MEDIUM, base_color=COLOR_BUTTON,
                      hover_color=COLOR_BUTTON_HOVER)
+BUTTON_MODE = None
+BUTTON_DIFFICULTY = None
+BUTTON_BOARD = None
+
 
 NUM_KEYS = range(48, 58)
 
-MODE = 1  # 1: pvp, 2: pvc, 3: cvc
+MODE = 2  # 1: pvp, 2: pvc, 3: cvc
 
-DROP_DELAY = 200
+DROP_DELAY = 100
 DELAY = DROP_DELAY * ROWS
 
 winners = {1: 0, 2: 0}
 
 
-class Connect4():
+class Connect4:
     def __init__(self):
         pygame.init()
         pygame.display.set_caption('Connect 4')
 
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        self.clock = pygame.time.Clock()
+        self.mouse_pos = pygame.mouse.get_pos()
         self.rows = ROWS
         self.cols = COLS
-        self.board = Board(ROWS, COLS)
+        self.game_board = Board(ROWS, COLS)
         self.draw_board()
         self.turn = 1
         self.piece_row = -1
@@ -62,12 +66,13 @@ class Connect4():
 
     def main_loop(self):
         while True:
-            self.move = 0
+            self.mouse_pos = pygame.mouse.get_pos()
             self.handle_inputs()
             if self.state == 'Menu':
                 self.main_menu()
             if self.state == 'Play':
                 self.play()
+                self.draw_board()
             if self.state == 'Options':
                 self.options()
             if self.state == 'Board Select':
@@ -78,118 +83,114 @@ class Connect4():
 
     def main_menu(self):
         self.screen.fill(COLOR_MENU)
-        title_text = LARGE_FONT.render('CONNECT 4', True, COLOR_TEXT)
-        title_text_rect = title_text.get_rect(center=(WIDTH/2, 150))
+        title_text = FONT_LARGE.render('CONNECT 4', True, COLOR_TEXT)
+        title_text_rect = title_text.get_rect(center=(WIDTH / 2, 150))
         self.screen.blit(title_text, title_text_rect)
 
-        mouse_pos = pygame.mouse.get_pos()
-
-        for button in [PLAY_BUTTON, OPTIONS_BUTTON, QUIT_BUTTON]:
-            button.check_hover(mouse_pos)
+        for button in [BUTTON_PLAY, BUTTON_OPTIONS, BUTTON_QUIT]:
+            button.check_hover(self.mouse_pos)
             button.update(self.screen)
 
     def options(self):
-        self.handle_inputs()
         self.screen.fill(COLOR_MENU)
-        # self.screen.blit(self.text, (100, 150))
-
-        mouse_pos = pygame.mouse.get_pos()
+        for button in []:
+            button.check_hover(self.mouse_pos)
+            button.update(self.screen)
 
     def board_selector(self):
-        self.state = 'Board'
-        while True:
-            self.handle_inputs()
-            self.screen.fill(COLOR_MENU)
-            # self.screen.blit(self.text, (100, 150))
-
-            mouse_pos = pygame.mouse.get_pos()
-
-            pygame.display.flip()
+        for button in []:
+            button.check_hover(self.mouse_pos)
+            button.update(self.screen)
+        self.screen.fill(COLOR_MENU)
 
     def difficulty_selector(self):
-        self.state = 'Difficulty'
-        while True:
-            self.handle_inputs()
-            self.screen.fill(COLOR_MENU)
-            # self.screen.blit(self.text, (100, 150))
-
-            mouse_pos = pygame.mouse.get_pos()
-
-            pygame.display.flip()
+        self.screen.fill(COLOR_MENU)
 
     def play(self):
+        if pygame.time.get_ticks() >= self.delay_start + DELAY and not self.falling:
+            if MODE == 1:
+                self.player_vs_player()
+            if MODE == 2:
+                self.player_vs_computer()
+            if MODE == 3:
+                self.computer_vs_computer()
         self.draw_board()
 
-        if MODE == 1:
-            self.play_pvp()
-        if MODE == 2:
-            self.play_pvc()
-        if MODE == 3:
-            self.play_cvc()
-
-    def play_pvp(self):
-        if (0 <= self.piece_col < self.cols and 
-            pygame.time.get_ticks() >= self.delay_start + DELAY):
-            
+    def player_vs_player(self):
+        if 0 <= self.piece_col < self.cols:
+            # Check if row is full first
+            # If so, they get to re-pick move
+            if all(self.game_board.board[:, self.piece_col - 1]):
+                return
+            # Otherwise drop piece
             self.piece_row = 0
-            success = self.player_turn(self.turn)
-            # if not success:
-            #     return
-            self.draw_board()
-            winner = self.board.check_win()
-            if winner:
-                pygame.time.wait(2000)
-                self.board.reset_board()
-                self.state = 'Menu'
-                self.main_menu()
-            if self.turn == 1:
-                self.turn = 2
-            else:
-                self.turn = 1
+            self.falling = True
+            # Start delay between turns
             self.delay_start = pygame.time.get_ticks()
 
-    def play_pvc(self):
+    def player_vs_computer(self):
         if self.turn == 1:
-            if self.move:
-                success = self.player_turn(1)
-                if not success:
+            if 0 <= self.piece_col < self.cols:
+                if all(self.game_board.board[:, self.piece_col - 1]):
                     return
-                self.draw_board()
-                winner = self.board.check_win()
+                self.piece_row = 0
+                self.falling = True
+                winner = self.game_board.check_win()
                 if winner:
                     pygame.time.wait(2000)
-                    self.board.reset_board()
-                    self.draw_board()
-                self.turn = 2
+                    self.game_board.reset_board()
                 self.delay_start = pygame.time.get_ticks()
 
-        elif pygame.time.get_ticks() >= self.delay_start + DELAY:
-            self.board, _ = minimax(self.board, 0, True, -np.inf, np.inf)
-            self.draw_board()
-            winner = self.board.check_win()
-            if winner:
-                pygame.time.wait(2000)
-                self.board.reset_board()
-                self.draw_board()
-            self.turn = 1
-
-    def play_cvc(self):
-        if pygame.time.get_ticks() >= self.delay_start + DELAY:
-
-            if self.turn == 1:
-                self.board, _ = minimax(self.board, 0, False, -np.inf, np.inf)
-                self.turn = 2
-            else:
-                self.board, _ = minimax(self.board, 0, True, -np.inf, np.inf)
-                self.turn = 1
-
-            self.draw_board()
-            winner = self.board.check_win()
-            if winner:
-                pygame.time.wait(2000)
-                self.board.reset_board()
-                self.draw_board()
+        else:
+            new_board, _ = minimax(self.game_board, 0, True, -np.inf, np.inf)
+            diff = new_board.board - self.game_board.board
+            for col in range(COLS):
+                if any(diff[:, col]):
+                    self.piece_col = col
+            self.piece_row = 0
+            self.falling = True
             self.delay_start = pygame.time.get_ticks()
+
+    def computer_vs_computer(self):
+        if pygame.time.get_ticks() >= self.delay_start + DELAY:
+            if self.turn == 1:
+                new_board, _ = minimax(self.game_board, 0, False, -np.inf, np.inf)
+            else:
+                new_board, _ = minimax(self.game_board, 0, True, -np.inf, np.inf)
+            diff = new_board.board - self.game_board.board
+            for col in range(COLS):
+                if any(diff[:, col]):
+                    self.piece_col = col
+            self.piece_row = 0
+            self.falling = True
+            self.delay_start = pygame.time.get_ticks()
+
+    def reset(self):
+        self.turn = 1
+        self.piece_row = -1
+        self.piece_col = -1
+        self.falling = False
+        self.delay_start = 0
+        self.game_board.reset_board()
+        self.draw_board()
+
+    def draw_board(self):
+        self.screen.fill(COLOR_BOARD)
+
+        for i in range(ROWS):
+            for j in range(COLS):
+                w, h = WIDTH // COLS, HEIGHT // ROWS
+                # pygame.draw.rect(self.screen, 'blue', [w*j, h*i, w+1, h+1], 5)  # grid
+                circle_rect = pygame.rect.Rect(w * j + 10, h * i + 10, w - 20, h - 20)  # circle parameters
+                if self.game_board.board[i, j] == 1:
+                    color = COLOR_1
+                elif self.game_board.board[i, j] == 2:
+                    color = COLOR_2
+                else:
+                    color = COLOR_BG
+                pygame.draw.ellipse(self.screen, color, circle_rect)
+
+        pygame.display.flip()
 
     def handle_inputs(self):
         for event in pygame.event.get():
@@ -201,6 +202,7 @@ class Connect4():
                 if event.key == pygame.K_ESCAPE:
                     print(winners)
                     self.state = 'Menu'
+                    self.reset()
                 if event.key in NUM_KEYS:
                     if pygame.time.get_ticks() >= self.delay_start + DELAY:
                         # Set column to key number
@@ -209,15 +211,13 @@ class Connect4():
                     print(winners)
 
             if event.type == pygame.MOUSEBUTTONDOWN:
-                # holds (x, y) coordinates of mouse
-                mouse_pos = pygame.mouse.get_pos()
-
                 if self.state == 'Menu':
-                    if PLAY_BUTTON.check_hover(mouse_pos):
+                    if BUTTON_PLAY.check_hover(self.mouse_pos):
                         self.state = 'Play'
-                    if OPTIONS_BUTTON.check_hover(mouse_pos):
+                        self.draw_board()
+                    if BUTTON_OPTIONS.check_hover(self.mouse_pos):
                         self.state = 'Options'
-                    if QUIT_BUTTON.check_hover(mouse_pos):
+                    if BUTTON_QUIT.check_hover(self.mouse_pos):
                         quit()
 
                 if self.state == 'Options':
@@ -233,73 +233,27 @@ class Connect4():
                 if self.falling:
 
                     # Move piece
-                    self.board.board[self.piece_row, self.piece_col] = self.turn
+                    self.game_board.board[self.piece_row, self.piece_col] = self.turn
                     if self.piece_row != 0:
-                        self.board.board[self.piece_row - 1, self.piece_col] = 0
+                        self.game_board.board[self.piece_row - 1, self.piece_col] = 0
+                    self.draw_board()
                     self.piece_row += 1
 
-                    # Check for bottom
-                    if self.piece_row == self.rows:
+                    # Check if it hit the bottom or another piece
+                    if self.piece_row == self.rows or self.game_board.board[self.piece_row, self.piece_col] != 0:
                         self.falling = False
                         self.piece_col = -1
-                    # Check for piece
-                    elif self.board.board[self.piece_row, self.piece_col] != 0:
-                        self.falling = False
-                        self.piece_col = -1
-                    
+                        if self.turn == 1:
+                            self.turn = 2
+                        else:
+                            self.turn = 1
 
-    def draw_board(self):
-        self.screen.fill(COLOR_BOARD)
-
-        for i in range(ROWS):
-            for j in range(COLS):
-                w, h = WIDTH / COLS, HEIGHT / ROWS
-                # pygame.draw.rect(self.screen, 'blue', [w*j, h*i, w+1, h+1], 5)  # grid
-                circle_rect = pygame.rect.Rect(w * j + 10, h * i + 10, w - 20, h - 20)  # circle parameters
-                if self.board.board[i, j] == 1:
-                    color = COLOR_1
-                elif self.board.board[i, j] == 2:
-                    color = COLOR_2
-                else:
-                    color = COLOR_BG
-                pygame.draw.ellipse(self.screen, color, circle_rect)
-
-        pygame.display.flip()
-
-    def valid_move(self, row, col):
-        if row < 1 or row > self.board.rows:
-            return False
-        if col < 1 or col > self.board.cols:
-            return False
-        if self.board.board[row - 1, col - 1] != 0:
-            return False
-        return True
-
-    def player_turn(self, player_num):
-
-        # Check if row is full
-        if all(self.board.board[:, self.piece_col - 1]):
-            return False
-
-        # Fall down a space
-        # every drop event (100 ms)
-        self.falling = True
-        
-        # self.board.board[self.piece_row - 1, self.piece_col - 1] = player_num
-        return True
-
-    def computer_turn(self, player_num):
-        col = self.move
-        row = self.rows
-
-        while not self.valid_move(row, col):
-            row -= 1
-            if row < 1:
-                print('You cannot play in that column.')
-                return False
-
-        self.board.board[row - 1, col - 1] = player_num
-        return True
+                        # Check for win
+                        winner = self.game_board.check_win()
+                        if winner:
+                            self.draw_board()
+                            pygame.time.wait(2000)
+                            self.game_board.reset_board()
 
 
 if __name__ == '__main__':
