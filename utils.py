@@ -3,7 +3,7 @@ import time
 from board import Board
 import random
 
-MAX_DEPTH = 4
+MAX_DEPTH = 2
 MAX_TT_ITEMS = 2000
 turn = 2
 counter = 0
@@ -73,9 +73,10 @@ def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: floa
         move_possibilities = moves(board)
         random.shuffle(move_possibilities)  # randomize move order
         move_possibilities.sort(key=lambda x: x.search_board(turn, 4, 0))  # prioritize wins
+        
         max_score = -np.inf
         max_score_move = None
-
+        
         for move in move_possibilities:
             # check if move already has been evaluated
             id = move.get_id()

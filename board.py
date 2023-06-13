@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class Board:
+class Board():
 
     def __init__(self, rows, cols):
         self.rows = rows
