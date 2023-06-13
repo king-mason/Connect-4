@@ -6,6 +6,7 @@ from button import Button
 
 ROWS, COLS = (6, 7)
 WIDTH, HEIGHT = (1000, 800)
+COL_WIDTH = WIDTH / COLS
 
 COLOR_1 = 'cyan'
 COLOR_2 = 'darkorchid'
@@ -36,7 +37,7 @@ BUTTON_BOARD = None
 
 NUM_KEYS = range(48, 58)
 
-MODE = 2  # 1: pvp, 2: pvc, 3: cvc
+MODE = 1  # 1: pvp, 2: pvc, 3: cvc
 
 DROP_DELAY = 100
 DELAY = DROP_DELAY * ROWS
@@ -72,7 +73,6 @@ class Connect4:
                 self.main_menu()
             if self.state == 'Play':
                 self.play()
-                self.draw_board()
             if self.state == 'Options':
                 self.options()
             if self.state == 'Board Select':
@@ -107,6 +107,7 @@ class Connect4:
         self.screen.fill(COLOR_MENU)
 
     def play(self):
+        self.draw_board()
         if pygame.time.get_ticks() >= self.delay_start + DELAY and not self.falling:
             if MODE == 1:
                 self.player_vs_player()
@@ -114,9 +115,9 @@ class Connect4:
                 self.player_vs_computer()
             if MODE == 3:
                 self.computer_vs_computer()
-        self.draw_board()
 
     def player_vs_player(self):
+        # Highlight column
         if 0 <= self.piece_col < self.cols:
             # Check if row is full first
             # If so, they get to re-pick move
@@ -190,8 +191,6 @@ class Connect4:
                     color = COLOR_BG
                 pygame.draw.ellipse(self.screen, color, circle_rect)
 
-        pygame.display.flip()
-
     def handle_inputs(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -213,6 +212,7 @@ class Connect4:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.state == 'Menu':
                     if BUTTON_PLAY.check_hover(self.mouse_pos):
+                        self.delay_start = pygame.time.get_ticks()
                         self.state = 'Play'
                         self.draw_board()
                     if BUTTON_OPTIONS.check_hover(self.mouse_pos):
@@ -224,8 +224,8 @@ class Connect4:
                     pass
 
                 if self.state == 'Play':
-                    if pygame.time.get_ticks() >= self.delay_start + DELAY:
-                        pass
+                    if pygame.time.get_ticks() >= self.delay_start + DELAY and not self.falling:
+                        self.piece_col = int(self.mouse_pos[0] // COL_WIDTH)
 
             # Falling animation
             if event.type == self.drop_timer:
