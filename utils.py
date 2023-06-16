@@ -2,6 +2,9 @@ import numpy as np
 import time
 from board import Board
 import random
+import pygame
+
+pygame.init()
 
 MAX_DEPTH = 4
 MAX_TT_ITEMS = 2000
@@ -12,6 +15,12 @@ step = 0
 # transposition table
 tt = dict()
 queue = list()
+
+
+def handle_inputs():
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            quit()
 
 
 def valid_move(board: Board, row: int, col: int):
@@ -53,6 +62,8 @@ def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: floa
     counter += 1
     empty_spaces = (board.board == 0).sum()
 
+    handle_inputs()
+
     if depth == 1:
         step += 1
         print(f'{step}/7')
@@ -73,8 +84,8 @@ def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: floa
         
         for move in move_possibilities:
             # check if move already has been evaluated
-            id = move.get_id()
-            score = tt.get(id, None)
+            id_ = move.get_id()
+            score = tt.get(id_, None)
             if score is None:
                 score = minimax(move, depth + 1, False, alpha, beta)[1]
             if score > max_score:
@@ -85,13 +96,13 @@ def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: floa
                 break
 
         if depth > 2:
-            id = max_score_move.get_id()
+            id_ = max_score_move.get_id()
             if depth > 3 or max_score < alpha:
-                if tt.get(id, None) is not None:
-                    if id in queue:
-                        queue.remove(id)
-                queue.append(id)
-            tt[id] = max_score
+                if tt.get(id_, None) is not None:
+                    if id_ in queue:
+                        queue.remove(id_)
+                queue.append(id_)
+            tt[id_] = max_score
             if len(tt) > MAX_TT_ITEMS:
                 if len(queue) == 0:
                     queue.append(random.choice(list(tt.keys())))
@@ -108,8 +119,8 @@ def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: floa
         min_score_move = None
 
         for move in move_possibilities:
-            id = move.get_id()
-            score = tt.get(id, None)
+            id_ = move.get_id()
+            score = tt.get(id_, None)
             if score is None:
                 score = minimax(move, depth + 1, True, alpha, beta)[1]
             if score < min_score:
@@ -120,14 +131,14 @@ def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: floa
                 break
 
         if depth > 2:
-            id = min_score_move.get_id()
+            id_ = min_score_move.get_id()
             if depth > 3 or min_score > beta:
-                if tt.get(id, None) is not None:
-                    if id in queue:
+                if tt.get(id_, None) is not None:
+                    if id_ in queue:
                         # reset spot in queue
-                        queue.remove(id)
-                queue.append(id)
-            tt[id] = min_score
+                        queue.remove(id_)
+                queue.append(id_)
+            tt[id_] = min_score
             if len(tt) > MAX_TT_ITEMS:
                 if len(queue) == 0:
                     queue.append(random.choice(list(tt.keys())))
@@ -136,38 +147,7 @@ def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: floa
         return min_score_move, min_score
 
 
-def negamax(board: Board, depth: int, max_player: bool):
-    global turn
-    if max_player:
-        turn = 2
-    else:
-        turn = 1
-    empty_spaces = (board.board == 0).sum()
-
-    if empty_spaces == 0 or depth == 0 or board.check_win():
-        if max_player:
-            return None, calc_score(board)
-        else:
-            return None, calc_score(board) * -1
-
-    max_score = -np.inf
-    max_score_move = None
-
-    for move in moves(board):
-        (new_board, score) = negamax(move, depth - 1, not max_player)
-        if new_board is None:
-            new_board = board
-        print(score)
-        # score = calc_score(new_board)
-        # print(new_board, score)
-        if score > max_score:
-            max_score_move = move
-            max_score = score
-
-    return max_score_move, -max_score
-
-
-# ASSUMES COMPUTER IS ALWAYS PLAYER 2
+# Note: Calculates score in terms of player 2
 def calc_score(board: Board):
     score = 0
 
@@ -191,7 +171,7 @@ def calc_score(board: Board):
     twos = board.search_board(1, 4, 2)
     score -= twos * 5
 
-    # bonus points for center pieces
+    # bonus points for pieces in the center
     center_pieces = board.board[:, board.cols // 2]
     score += list(center_pieces).count(2)
 
@@ -216,20 +196,19 @@ def main():
     print()
     print('Current Board:')
     my_board.print_board()
-    # print(calc_score(arr))
+    print(calc_score(my_board))
     time.sleep(3)
     print()
-    # print('Best move:')
-    # move, score = minimax(my_board, 0, True, -np.inf, np.inf)
-    # diff = my_board.board - move.board
-    # for col in range(my_board.cols):
-    #     if any(diff[:, col]):
-    #         print('Playing in column', col + 1)
-    # move.print_board()
-    # print('Score:', score)
-    # print(f'Called minimax {counter} times')
+    print('Best move:')
+    move, score = minimax(my_board, 0, True, -np.inf, np.inf)
+    diff = my_board.board - move.board
+    for col in range(my_board.cols):
+        if any(diff[:, col]):
+            print('Playing in column', col + 1)
+    move.print_board()
+    print('Score:', score)
+    print(f'Called minimax {counter} times')
 
 
 if __name__ == '__main__':
     main()
-
