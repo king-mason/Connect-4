@@ -154,7 +154,7 @@ class Connect4:
         if 0 <= self.piece_col < self.cols:
             # Check if row is full first
             # If so, they get to re-pick move
-            if all(self.game_board.board[:, self.piece_col - 1]):
+            if all(self.game_board.board[:, self.piece_col]):
                 return
             # Otherwise drop piece
             self.piece_row = 0
@@ -167,7 +167,8 @@ class Connect4:
             # Highlight column
             self.draw_highlight()
             if 0 <= self.piece_col < self.cols:
-                if all(self.game_board.board[:, self.piece_col - 1]):
+                if all(self.game_board.board[:, self.piece_col]):
+                    print('col full')
                     return
                 self.piece_row = 0
                 self.falling = True
@@ -255,7 +256,9 @@ class Connect4:
                         # Set column to key number
                         self.piece_col = event.key - 49
                 if event.key == pygame.K_SPACE:
-                    print(self.game_board.get_id())
+                    # print(self.game_board.get_id())
+                    print(self.piece_col)
+                    print(self.turn)
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.state == 'Menu':
