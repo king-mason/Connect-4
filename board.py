@@ -22,7 +22,7 @@ class Board():
         print('+' + '—' * (self.cols * 2 + 1) + '+')
 
     def search_board(self, player_num: int, length: int, blank_spaces: int):
-        """Generalized search method that will count and return all the rows, columns, and diagonals
+        """Generalized search method that will return all the positions of rows, columns, and diagonals
            that contain only the given player number and the exact amount of blank spaces."""
 
         def valid_section(section):
@@ -33,7 +33,7 @@ class Board():
                 return True
             return False
 
-        total = 0
+        positions = []
 
         for i in range(self.rows):
             for j in range(self.cols):
@@ -42,13 +42,13 @@ class Board():
                 if j < self.cols - (length - 1):
                     horizontal = self.board[i, j:j+length]
                     if valid_section(horizontal):
-                        total += 1
+                        positions.append([(i, j+k) for k in range(length)])
                     
                 # check down
                 if i < self.rows - (length - 1):
                     vertical = self.board[i:i+length, j]
                     if valid_section(vertical):
-                        total += 1
+                        positions.append([(i+k, j) for k in range(length)])
 
                 # check diagonals
                 if j < self.cols - (length - 1) and i < self.rows - (length - 1):
@@ -56,21 +56,21 @@ class Board():
                     # check positive sloped diagonals
                     ascending = np.array([self.board[i+(length-1)-k, j+k] for k in range(length)])
                     if valid_section(ascending):
-                        total += 1
+                        positions.append([(i+(length-1)-k, j+k) for k in range(length)])
 
                     # check negative sloped diagonals
                     descending = np.array([self.board[i+k, j+k] for k in range(length)])
                     if valid_section(descending):
-                        total += 1
-                    
-        return total
+                        positions.append([(i+k, j+k) for k in range(length)])
+                
+        return positions
     
     def check_win(self):
-        if self.search_board(1, 4, 0) > 0:
-            return 1
-        if self.search_board(2, 4, 0) > 0:
-            return 2
-        return 0
+        if len(positions_p1:=self.search_board(1, 4, 0)) > 0:
+            return positions_p1
+        if len(positions_p2:=self.search_board(2, 4, 0)) > 0:
+            return positions_p2
+        return []
 
     def get_id(self):
         id = ''

@@ -6,8 +6,8 @@ import pygame
 
 pygame.init()
 
-MAX_DEPTH = 4
-MAX_TT_ITEMS = 2000
+MAX_DEPTH = 4  # default
+MAX_TT_ITEMS = 100_000
 turn = 2
 counter = 0
 step = 0
@@ -55,7 +55,7 @@ def moves(board: Board):
     return possible_moves
 
 
-def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: float):
+def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: float, max_depth: int = MAX_DEPTH):
     global turn
     global counter
     global step
@@ -70,7 +70,7 @@ def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: floa
         if step == 7:
             step = 0
 
-    if empty_spaces == 0 or depth == MAX_DEPTH or board.check_win():
+    if empty_spaces == 0 or depth == max_depth or board.check_win():
         return None, calc_score(board)
 
     if max_player:
@@ -87,13 +87,20 @@ def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: floa
             id_ = move.get_id()
             score = tt.get(id_, None)
             if score is None:
-                score = minimax(move, depth + 1, False, alpha, beta)[1]
+                score = minimax(move, depth + 1, False, alpha, beta, max_depth)[1]
+                if not score:
+                    continue
+            if score > 5_000:
+                return move, score
             if score > max_score:
                 max_score_move = move
                 max_score = score
             alpha = max(alpha, max_score)
             if alpha >= beta:
                 break
+
+        if not max_score_move:
+            return -np.inf, None
 
         if depth > 2:
             id_ = max_score_move.get_id()
@@ -122,13 +129,20 @@ def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: floa
             id_ = move.get_id()
             score = tt.get(id_, None)
             if score is None:
-                score = minimax(move, depth + 1, True, alpha, beta)[1]
+                score = minimax(move, depth + 1, True, alpha, beta, max_depth)[1]
+            if not score:
+                continue
+            if score < -5000:
+                return move, score
             if score < min_score:
                 min_score_move = move
                 min_score = score
             beta = min(beta, min_score)
             if alpha >= beta:
                 break
+
+        if not min_score_move:
+            return np.inf, None
 
         if depth > 2:
             id_ = min_score_move.get_id()
@@ -140,9 +154,10 @@ def minimax(board: Board, depth: int, max_player: bool, alpha: float, beta: floa
                 queue.append(id_)
             tt[id_] = min_score
             if len(tt) > MAX_TT_ITEMS:
-                if len(queue) == 0:
-                    queue.append(random.choice(list(tt.keys())))
-                del tt[queue.pop(0)]
+                if len(queue) > 0:
+                    del tt[queue.pop(0)]
+                else:
+                    del tt[random.choice(list(tt.keys()))]
 
         return min_score_move, min_score
 
@@ -152,23 +167,23 @@ def calc_score(board: Board):
     score = 0
 
     # computer
-    wins = board.search_board(2, 4, 0)
-    score += wins * 1000
+    wins = len(board.search_board(2, 4, 0))
+    score += wins * 10000
 
-    threes = board.search_board(2, 4, 1)
+    threes = len(board.search_board(2, 4, 1))
     score += threes * 15
 
-    twos = board.search_board(2, 4, 2)
+    twos = len(board.search_board(2, 4, 2))
     score += twos * 8
 
     # opponent
-    wins = board.search_board(1, 4, 0)
-    score -= wins * 1000
+    wins = len(board.search_board(1, 4, 0))
+    score -= wins * 10000
 
-    threes = board.search_board(1, 4, 1)
+    threes = len(board.search_board(1, 4, 1))
     score -= threes * 10
 
-    twos = board.search_board(1, 4, 2)
+    twos = len(board.search_board(1, 4, 2))
     score -= twos * 5
 
     # bonus points for pieces in the center
@@ -179,8 +194,8 @@ def calc_score(board: Board):
     comp_possible_wins = 0
     opp_possible_wins = 0
     for i in range(4):
-        comp_possible_wins += board.search_board(2, 4, i + 1)
-        opp_possible_wins += board.search_board(1, 4, i + 1)
+        comp_possible_wins += len(board.search_board(2, 4, i + 1))
+        opp_possible_wins += len(board.search_board(1, 4, i + 1))
     score += comp_possible_wins - opp_possible_wins
 
     return score
